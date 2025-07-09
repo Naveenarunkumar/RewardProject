@@ -1,10 +1,15 @@
 package com.example.demo;
 
+import com.example.demo.service.RewardsService;
 import com.example.demo.dto.CustomerRewardsResponse;
-import com.example.demo.exception.InvalidTransactionException;
+import com.example.demo.exception.CustomerNotFoundException;
+import com.example.demo.exception.NegativeAmountException;
+import com.example.demo.exception.TransactionNotFoundException;
 import com.example.demo.model.Transaction;
-import com.example.demo.*;
+import com.example.demo.repository.RewardsRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -12,77 +17,80 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-/**
- * Unit tests for RewardsService with multiple customers and transactions.
- */
-public class RewardsServiceTest {
+class RewardsServiceTest {
 
-    private final RewardsService rewardsService = new RewardsService() {
-        protected List<Transaction> getMockedTransactions() {
-            return List.of(
-                new Transaction("C1", 120, LocalDate.of(2025, 6, 1)),   // 90 pts
-                new Transaction("C1", 75, LocalDate.of(2025, 6, 15)),   // 25 pts
-                new Transaction("C1", 200, LocalDate.of(2025, 7, 10)),  // 250 pts
-                new Transaction("C2", 95, LocalDate.of(2025, 6, 5)),    // 45 pts
-                new Transaction("C2", 130, LocalDate.of(2025, 7, 20)),  // 110 pts
-                new Transaction("C3", 45, LocalDate.of(2025, 6, 25)),   // 0 pts
-                new Transaction("C3", 105, LocalDate.of(2025, 7, 5))    // 60 pts
-            );
-        }
-    };
+    private RewardsRepository rewardsRepository;
+    private RewardsService rewardsService;
+
+    @BeforeEach
+    void setUp() {
+        rewardsRepository = mock(RewardsRepository.class);
+        rewardsService = new RewardsService(rewardsRepository);
+    }
 
     @Test
-    void testGetRewardsByCustomerId_C1() {
+    void testGetAllCustomerRewardsWithin3Months() {
+        List<Transaction> transactions = List.of(
+                new Transaction("C1", 120, LocalDate.now().minusDays(10)),
+                new Transaction("C1", 80, LocalDate.now().minusMonths(2)),
+                new Transaction("C2", 60, LocalDate.now().minusMonths(4)) // should be filtered out
+        );
+        when(rewardsRepository.getMockedTransactions()).thenReturn(transactions);
+
+        List<CustomerRewardsResponse> result = rewardsService.getAllCustomerRewards();
+
+        assertEquals(1, result.size()); // C2 should be filtered out
+        CustomerRewardsResponse c1Response = result.get(0);
+        assertEquals("C1", c1Response.getCustomerId());
+        assertEquals(120, c1Response.getTotalPoints());
+        assertEquals(2, c1Response.getMonthlyPoints().size());
+    }
+
+    @Test
+    void testGetRewardsByCustomerId_withValidTransactions() {
+        List<Transaction> transactions = List.of(
+                new Transaction("C1", 120, LocalDate.now().minusDays(10)),
+                new Transaction("C1", 70, LocalDate.now().minusMonths(1))
+        );
+        when(rewardsRepository.getMockedTransactions()).thenReturn(transactions);
+
         CustomerRewardsResponse response = rewardsService.getRewardsByCustomerId("C1");
 
         assertEquals("C1", response.getCustomerId());
-        assertEquals(3, response.getMonthlyPoints().size());
-        assertEquals(90 + 25, response.getMonthlyPoints().get(YearMonth.of(2025, 6)));
-        assertEquals(250, response.getMonthlyPoints().get(YearMonth.of(2025, 7)));
-        assertEquals(365, response.getTotalPoints());
+        assertEquals(110, response.getTotalPoints());
+        assertEquals(1, response.getMonthlyPoints().size());
     }
 
     @Test
-    void testGetRewardsByCustomerId_C2() {
-        CustomerRewardsResponse response = rewardsService.getRewardsByCustomerId("C2");
-
-        assertEquals("C2", response.getCustomerId());
-        assertEquals(2, response.getMonthlyPoints().size());
-        assertEquals(45, response.getMonthlyPoints().get(YearMonth.of(2025, 6)));
-        assertEquals(110, response.getMonthlyPoints().get(YearMonth.of(2025, 7)));
-        assertEquals(155, response.getTotalPoints());
+    void testGetRewardsByCustomerId_nullId_throwsException() {
+        assertThrows(CustomerNotFoundException.class, () -> {
+            rewardsService.getRewardsByCustomerId(null);
+        });
     }
 
     @Test
-    void testGetRewardsByCustomerId_C3() {
-        CustomerRewardsResponse response = rewardsService.getRewardsByCustomerId("C3");
+    void testGetRewardsByCustomerId_emptyTransactions_throwsException() {
+        List<Transaction> transactions = List.of(
+                new Transaction("C1", 50, LocalDate.now().minusMonths(5)) // old, should be filtered
+        );
+        when(rewardsRepository.getMockedTransactions()).thenReturn(transactions);
 
-        assertEquals("C3", response.getCustomerId());
-        assertEquals(2, response.getMonthlyPoints().size());
-        assertEquals(0, response.getMonthlyPoints().get(YearMonth.of(2025, 6)));
-        assertEquals(60, response.getMonthlyPoints().get(YearMonth.of(2025, 7)));
-        assertEquals(60, response.getTotalPoints());
+        assertThrows(TransactionNotFoundException.class, () -> {
+            rewardsService.getRewardsByCustomerId("C1");
+        });
     }
 
     @Test
-    void testGetAllCustomerRewards() {
-        List<CustomerRewardsResponse> all = rewardsService.getAllCustomerRewards();
-        assertEquals(3, all.size());
-        assertTrue(all.stream().anyMatch(r -> r.getCustomerId().equals("C1")));
-        assertTrue(all.stream().anyMatch(r -> r.getCustomerId().equals("C2")));
-        assertTrue(all.stream().anyMatch(r -> r.getCustomerId().equals("C3")));
-    }
+    void testNegativeTransactionAmountThrowsException() {
+        List<Transaction> transactions = List.of(
+                new Transaction("C1", -50, LocalDate.now())
+        );
+        when(rewardsRepository.getMockedTransactions()).thenReturn(transactions);
 
-    @Test
-    void testInvalidCustomerId() {
-        assertThrows(InvalidTransactionException.class, () ->
-                rewardsService.getRewardsByCustomerId("UNKNOWN"));
-    }
-
-    @Test
-    void testNullCustomerId() {
-        assertThrows(InvalidTransactionException.class, () ->
-                rewardsService.getRewardsByCustomerId(null));
+        assertThrows(NegativeAmountException.class, () -> {
+            rewardsService.getRewardsByCustomerId("C1");
+        });
     }
 }

@@ -1,9 +1,11 @@
-package com.example.demo;
-
-
+package com.example.demo.service;
 import com.example.demo.dto.CustomerRewardsResponse;
-import com.example.demo.exception.InvalidTransactionException;
+import com.example.demo.exception.CustomerNotFoundException;
+import com.example.demo.exception.NegativeAmountException;
+import com.example.demo.exception.TransactionNotFoundException;
 import com.example.demo.model.Transaction;
+import com.example.demo.repository.RewardsRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -16,23 +18,36 @@ import java.util.stream.Collectors;
  */
 @Service
 public class RewardsService {
-	
-	/**
-	 * Retrieves reward points for all customers.
-	 *
-	 * @return list of reward summaries
-	 */
-	public List<CustomerRewardsResponse> getAllCustomerRewards() {
-	    List<Transaction> allTransactions = getMockedTransactions();
 
-	    Map<String, List<Transaction>> grouped = allTransactions.stream()
-	            .collect(Collectors.groupingBy(Transaction::getCustomerId));
+    /**
+     * Retrieves reward points for all customers.
+     *
+     * @return list of reward summaries
+     */
+    private final RewardsRepository rewardsRepository;
 
-	    return grouped.entrySet().stream()
-	            .map(entry -> calculateRewards(entry.getKey(), entry.getValue()))
-	            .toList();
-	}
-	
+    @Autowired
+    public RewardsService(RewardsRepository rewardsRepository){
+        this.rewardsRepository = rewardsRepository;
+    }
+    public List<CustomerRewardsResponse> getAllCustomerRewards() {
+        List<Transaction> allTransactions = rewardsRepository.getMockedTransactions();
+
+        LocalDate threeMonthsAgo = LocalDate.now().minusMonths(3);
+
+        List<Transaction> recentTransactions = allTransactions.stream()
+                .filter(tx -> !tx.getDate().isBefore(threeMonthsAgo))
+                .toList();
+
+        Map<String, List<Transaction>> grouped = recentTransactions.stream()
+                .collect(Collectors.groupingBy(Transaction::getCustomerId));
+
+        return grouped.entrySet().stream()
+                .map(entry -> calculateRewards(entry.getKey(), entry.getValue()))
+                .toList();
+    }
+
+
 
     /**
      * Retrieves reward points for a specific customer.
@@ -42,21 +57,25 @@ public class RewardsService {
      */
     public CustomerRewardsResponse getRewardsByCustomerId(String customerId) {
         if (customerId == null || customerId.isBlank()) {
-            throw new InvalidTransactionException("Customer ID must not be null or empty.");
+            throw new CustomerNotFoundException("Customer ID must not be null or empty.");
         }
 
-        List<Transaction> allTransactions = getMockedTransactions();
+        List<Transaction> allTransactions = rewardsRepository.getMockedTransactions();
 
+        // Filter by customer and last 3 months
+        LocalDate threeMonthsAgo = LocalDate.now().minusMonths(3);
         List<Transaction> customerTx = allTransactions.stream()
                 .filter(tx -> tx.getCustomerId().equalsIgnoreCase(customerId))
+                .filter(tx -> !tx.getDate().isBefore(threeMonthsAgo))
                 .toList();
 
         if (customerTx.isEmpty()) {
-            throw new InvalidTransactionException("No transactions found for customer: " + customerId);
+            throw new TransactionNotFoundException("No recent transactions found for customer: " + customerId);
         }
 
         return calculateRewards(customerId, customerTx);
     }
+
 
     /**
      * Calculates reward points for a customer based on their transactions.
@@ -70,7 +89,7 @@ public class RewardsService {
 
         for (Transaction tx : transactions) {
             if (tx.getAmount() < 0) {
-                throw new InvalidTransactionException("Transaction amount cannot be negative.");
+                throw new NegativeAmountException("Transaction amount cannot be negative.");
             }
 
             YearMonth month = YearMonth.from(tx.getDate());
@@ -106,14 +125,5 @@ public class RewardsService {
      *
      * @return list of transactions
      */
-    private List<Transaction> getMockedTransactions() {
-        return List.of(
-                new Transaction("C1", 120, LocalDate.of(2025, 6, 1)),
-                new Transaction("C1", 75, LocalDate.of(2025, 6, 15)),
-                new Transaction("C1", 200, LocalDate.of(2025, 7, 10)),
-                new Transaction("C2", 95, LocalDate.of(2025, 6, 5)),
-                new Transaction("C2", 130, LocalDate.of(2025, 7, 20)),
-                new Transaction("C3", 45, LocalDate.of(2025, 6, 25)) // No points
-        );
-    }
+
 }
