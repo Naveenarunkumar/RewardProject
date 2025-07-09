@@ -17,3 +17,4 @@ public class NegativeAmountException extends RuntimeException {
         super(message, cause);
     }
 }
+

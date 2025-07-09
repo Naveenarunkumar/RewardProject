@@ -82,3 +82,4 @@ public class RewardsControllerTest {
                 .andExpect(content().string("An unexpected error occurred: Customer not found"));
     }
 }
+
