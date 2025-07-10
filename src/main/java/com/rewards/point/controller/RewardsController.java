@@ -4,7 +4,10 @@ import com.rewards.point.dto.CustomerRewardsResponse;
 import com.rewards.point.service.RewardsService;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
@@ -37,6 +40,7 @@ public class RewardsController {
      * GET endpoint to retrieve reward points for a specific customer.
      *
      * @param customerId the ID of the customer
+     * @parm used for Only matches if the specified query parameter is present (or has a specific value)
      * @return reward points summary for the customer
      */
     @GetMapping(params = "customerId")
@@ -45,13 +49,14 @@ public class RewardsController {
         CustomerRewardsResponse response = rewardsService.getRewardsByCustomerId(customerId);
         return ResponseEntity.ok(response);
     }
+    
 
     /**
      * GET endpoint to retrieve reward points for all customers.
      *
      * @return list of reward summaries for all customers
      */
-    @GetMapping
+    @GetMapping("/fetchAll")
     public ResponseEntity<List<CustomerRewardsResponse>> getAllRewards() {
         List<CustomerRewardsResponse> responses = rewardsService.getAllCustomerRewards();
         return ResponseEntity.ok(responses);

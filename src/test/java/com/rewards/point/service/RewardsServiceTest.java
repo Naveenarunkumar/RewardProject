@@ -1,4 +1,4 @@
-package com.rewards.point;
+package com.rewards.point.service;
 
 import com.rewards.point.dto.CustomerRewardsResponse;
 import com.rewards.point.exception.CustomerNotFoundException;

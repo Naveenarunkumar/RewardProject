@@ -1,9 +1,9 @@
- Customer Rewards Program
+###Customer Rewards Program
 
 This Spring Boot application calculates reward points for customers based on their transaction history. It provides RESTful APIs to retrieve monthly and total reward points for individual customers or all customers.
 
 
- Features
+###Features
 -  Calculates reward points based on transaction amount:
 - 2 points for every dollar spent over $100
 - 1 point for every dollar spent between $50 and $100
@@ -16,7 +16,7 @@ This Spring Boot application calculates reward points for customers based on the
 
 
 
- Technologies Used
+###Technologies Used
 - Java 17+
 - Spring Boot 3.x
 - Maven
@@ -26,7 +26,7 @@ This Spring Boot application calculates reward points for customers based on the
 
 
 
-Project Structure
+###Project Structure
 
 - `controller/` – Exposes REST API endpoints (e.g., `RewardsController`)
 - `service/` – Contains business logic for calculating reward points
@@ -47,7 +47,7 @@ Project Structure
 
 
 
-Reward Calculation Logic
+###Reward Calculation Logic
 
 Reward points are calculated based on the amount spent in a single transaction:
 
@@ -72,60 +72,79 @@ Example
 
 
 
-API Endpoints
+##API Endpoints
 
 Get rewards for a specific customer
 
-GET /api/rewards?customerId={customerId}
 
 
-Request
+***Request***
 
 GET /api/rewards?customerId=C1
 
 
 
-Response
+***Response***
 
 {
   "customerId": "C1",
-  "monthlyPoints": {
+  
+  
+  "monthlyPoints": 
+  {
     "2025-06": 90,
     "2025-07": 250
   },
+  
+  
   "totalPoints": 340
 }
 
 
+
+
+
 Get rewards for all customers
 
+***Request***
 
 
-GET /api/rewards
+GET /api/rewards/getAll
 
 
- Response
+ ***Response***
+ 
 
-[
-  {
+
+  
+  [{
     "customerId": "C1",
-    "monthlyPoints": {
+   
+   "monthlyPoints": {
       "2025-06": 90,
       "2025-07": 250
     },
-    "totalPoints": 340
+    
+   "totalPoints": 340
   },
+  
+  
   {
     "customerId": "C2",
-    "monthlyPoints": {
+    
+   "monthlyPoints": {
       "2025-06": 45,
       "2025-07": 110
     },
-    "totalPoints": 155
+    
+   "totalPoints": 155
   }
 ]
 
- Running Tests
+
+
+
+***Running Tests***
 
 Run all unit and integration tests:
 
@@ -142,7 +161,7 @@ Notes
 
 
 
-Author
+###Author
 
 S. Naveenarunkumar
 

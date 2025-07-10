@@ -1,4 +1,4 @@
-package com.rewards.point;
+package com.rewards.point.controller;
 
 import com.rewards.point.controller.RewardsController;
 import com.rewards.point.dto.CustomerRewardsResponse;
@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -23,6 +22,10 @@ import java.util.List;
 import java.util.Map;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 
 @WebMvcTest(RewardsController.class)
 public class RewardsControllerTest {
@@ -51,9 +54,9 @@ public class RewardsControllerTest {
                 .andExpect(jsonPath("$.customerId").value("C1"))
                 .andExpect(jsonPath("$.totalPoints").value(250));
     }
-
+    
     @Test
-    @DisplayName("GET /api/rewards - returns all customer rewards")
+    @DisplayName("GET /api/rewards/fetchAll - returns all customer rewards")
     void testGetAllRewards() throws Exception {
         List<CustomerRewardsResponse> responses = List.of(
                 new CustomerRewardsResponse("C1", Map.of(YearMonth.of(2025, 7), 120), 120),
@@ -62,7 +65,7 @@ public class RewardsControllerTest {
 
         Mockito.when(rewardsService.getAllCustomerRewards()).thenReturn(responses);
 
-        mockMvc.perform(MockMvcRequestBuilders.get("/api/rewards")
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/rewards/fetchAll")
                         .accept(APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2))
@@ -70,6 +73,8 @@ public class RewardsControllerTest {
                 .andExpect(jsonPath("$[1].customerId").value("C2"));
     }
 
+
+	
     @Test
     @DisplayName("GET /api/rewards?customerId=INVALID - returns 404")
     void testInvalidCustomerIdReturns404() throws Exception {
@@ -83,4 +88,7 @@ public class RewardsControllerTest {
                 .andExpect(content().string("An unexpected error occurred: Customer not found"));
     }
 }
+
+
+
 
